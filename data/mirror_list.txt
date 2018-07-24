@@ -1,0 +1,1 @@
+zju https://mirrors.zju.edu.cn/julia
