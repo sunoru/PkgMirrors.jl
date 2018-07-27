@@ -3,11 +3,12 @@
 module Entry
 
 import Base: thispatch, nextpatch, nextminor, nextmajor, check_new_version
-import ..Reqs, ..Read, ..Query, ..Resolve, ..Cache, ..Write, ..Dir
+import ..Reqs, ..Read, ..Query, ..Resolve, ..Write, ..Dir
 import Base.LibGit2
 importall Base.LibGit2
 import ...Pkg2.PkgError
 using ..Types
+import ...Mirrors
 
 macro recover(ex)
     quote
@@ -80,7 +81,6 @@ add(pkg::AbstractString, vers::VersionNumber...) = add(pkg,VersionSet(vers...))
 function rm(pkg::AbstractString)
     edit(Reqs.rm,pkg) && return
     ispath(pkg) || return info("Package $pkg is not installed")
-    info("Removing $pkg (unregistered)")
     Write.remove(pkg)
 end
 
@@ -112,19 +112,15 @@ end
 function installed(pkg::AbstractString)
     avail = Read.available(pkg)
     if Read.isinstalled(pkg)
-        res = typemin(VersionNumber)
-        if ispath(joinpath(pkg,".git"))
-            LibGit2.with(GitRepo, pkg) do repo
-                res = Read.installed_version(pkg, repo, avail)
-            end
-        end
-        return res
+        return Read.installed_version(pkg)
     end
     isempty(avail) && throw(PkgError("$pkg is not a package (not registered or installed)"))
     return nothing # registered but not installed
 end
 
 function status(io::IO; pkgname::AbstractString = "")
+    mirror = Mirrors.current()
+    println(io, "Mirror: $(mirror.name) ($(mirror.url))")
     showpkg(pkg) = isempty(pkgname) ? true : (pkg == pkgname)
     reqs = Reqs.parse("REQUIRE")
     instd = Read.installed()
@@ -178,6 +174,8 @@ function status(io::IO, pkg::AbstractString, ver::VersionNumber, fix::Bool)
         finally
             close(prepo)
         end
+    elseif Mirrors.hascache("versions", pkg)
+        print_with_color(Base.warn_color(), io, "non-repo (from Mirrors)")
     else
         print_with_color(Base.warn_color(), io, "non-repo (unregistered)")
     end
@@ -186,24 +184,6 @@ end
 
 function status(io::IO, pkg::AbstractString, msg::AbstractString)
     @printf io " - %-29s %-19s\n" pkg msg
-end
-
-function clone(url::AbstractString, pkg::AbstractString)
-    info("Cloning $pkg from $url")
-    ispath(pkg) && throw(PkgError("$pkg already exists"))
-    try
-        LibGit2.with(LibGit2.clone(url, pkg)) do repo
-            LibGit2.set_remote_url(repo, url)
-        end
-    catch err
-        isdir(pkg) && Base.rm(pkg, recursive=true)
-        rethrow(err)
-    end
-    info("Computing changes...")
-    if !edit(Reqs.add, pkg)
-        isempty(Reqs.parse("$pkg/REQUIRE")) && return
-        resolve()
-    end
 end
 
 function url_and_pkg(url_or_pkg::AbstractString)
@@ -218,71 +198,22 @@ function url_and_pkg(url_or_pkg::AbstractString)
     return url_or_pkg, m.captures[1]
 end
 
-clone(url_or_pkg::AbstractString) = clone(url_and_pkg(url_or_pkg)...)
-
-function checkout(pkg::AbstractString, branch::AbstractString, do_merge::Bool, do_pull::Bool)
-    ispath(pkg,".git") || throw(PkgError("$pkg is not a git repo"))
-    info("Checking out $pkg $branch...")
-    with(GitRepo, pkg) do r
-        LibGit2.transact(r) do repo
-            LibGit2.isdirty(repo) && throw(PkgError("$pkg is dirty, bailing"))
-            LibGit2.branch!(repo, branch, track=LibGit2.Consts.REMOTE_ORIGIN)
-            do_merge && LibGit2.merge!(repo, fastforward=true) # merge changes
-            if do_pull
-                info("Pulling $pkg latest $branch...")
-                LibGit2.fetch(repo)
-                LibGit2.merge!(repo, fastforward=true)
-            end
-            resolve()
-        end
-    end
+function unpin(pkg::AbstractString)
+    cache = Mirrors.getcache("versions", pkg)
+    cache === nothing && return false
+    tmp = split(cache, ' ')
+    Mirrors.setcache(tmp[1], "versions", pkg)
 end
 
 function free(pkg::AbstractString)
-    ispath(pkg,".git") || throw(PkgError("$pkg is not a git repo"))
-    Read.isinstalled(pkg) || throw(PkgError("$pkg cannot be freed – not an installed package"))
-    avail = Read.available(pkg)
-    isempty(avail) && throw(PkgError("$pkg cannot be freed – not a registered package"))
-    with(GitRepo, pkg) do repo
-        LibGit2.isdirty(repo) && throw(PkgError("$pkg cannot be freed – repo is dirty"))
-        info("Freeing $pkg")
-        vers = sort!(collect(keys(avail)), rev=true)
-        while true
-            for ver in vers
-                sha1 = avail[ver].sha1
-                LibGit2.iscommit(sha1, repo) || continue
-                return LibGit2.transact(repo) do r
-                    LibGit2.isdirty(repo) && throw(PkgError("$pkg is dirty, bailing"))
-                    LibGit2.checkout!(repo, sha1)
-                    resolve()
-                end
-            end
-            isempty(Cache.prefetch(pkg, Read.url(pkg), [a.sha1 for (v,a)=avail])) && continue
-            throw(PkgError("can't find any registered versions of $pkg to checkout"))
-        end
-    end
+    unpin(pkg)
+    resolve()
 end
 
 function free(pkgs)
     try
         for pkg in pkgs
-            ispath(pkg,".git") || throw(PkgError("$pkg is not a git repo"))
-            Read.isinstalled(pkg) || throw(PkgError("$pkg cannot be freed – not an installed package"))
-            avail = Read.available(pkg)
-            isempty(avail) && throw(PkgError("$pkg cannot be freed – not a registered package"))
-            with(GitRepo, pkg) do repo
-                LibGit2.isdirty(repo) && throw(PkgError("$pkg cannot be freed – repo is dirty"))
-                info("Freeing $pkg")
-                vers = sort!(collect(keys(avail)), rev=true)
-                for ver in vers
-                    sha1 = avail[ver].sha1
-                    LibGit2.iscommit(sha1, repo) || continue
-                    LibGit2.checkout!(repo, sha1)
-                    break
-                end
-            end
-            isempty(Cache.prefetch(pkg, Read.url(pkg), [a.sha1 for (v,a)=avail])) && continue
-            throw(PkgError("Can't find any registered versions of $pkg to checkout"))
+            unpin(pkg)
         end
     finally
         resolve()
@@ -290,63 +221,20 @@ function free(pkgs)
 end
 
 function pin(pkg::AbstractString, head::AbstractString)
-    ispath(pkg,".git") || throw(PkgError("$pkg is not a git repo"))
-    should_resolve = true
-    with(GitRepo, pkg) do repo
-        id = if isempty(head) # get HEAD commit
-            # no need to resolve, branch will be from HEAD
-            should_resolve = false
-            LibGit2.head_oid(repo)
-        else
-            LibGit2.revparseid(repo, head)
-        end
-        commit = LibGit2.GitCommit(repo, id)
-        try
-            # note: changing the following naming scheme requires a corresponding change in Read.ispinned()
-            branch = "pinned.$(string(id)[1:8]).tmp"
-            if LibGit2.isattached(repo) && LibGit2.branch(repo) == branch
-                info("Package $pkg is already pinned" * (isempty(head) ? "" : " to the selected commit"))
-                should_resolve = false
-                return
-            end
-            ref = LibGit2.lookup_branch(repo, branch)
-            try
-                if !isnull(ref)
-                    if LibGit2.revparseid(repo, branch) != id
-                        throw(PkgError("Package $pkg: existing branch $branch has " *
-                            "been edited and doesn't correspond to its original commit"))
-                    end
-                    info("Package $pkg: checking out existing branch $branch")
-                else
-                    info("Creating $pkg branch $branch")
-                    ref = Nullable(LibGit2.create_branch(repo, branch, commit))
-                end
-
-                # checkout selected branch
-                with(LibGit2.peel(LibGit2.GitTree, get(ref))) do btree
-                    LibGit2.checkout_tree(repo, btree)
-                end
-                # switch head to the branch
-                LibGit2.head!(repo, get(ref))
-            finally
-                close(get(ref))
-            end
-        finally
-            close(commit)
-        end
+    cache = Mirrors.getcache("versions", pkg)
+    if cache !== nothing
+        isempty(head) || throw(PkgError("$pkg is a non-git repo so only current version can be pinned"))
+        tmp = split(cache, ' ')
+        Mirrors.setcache(join([tmp[1], "pinned"], ' '), "versions", pkg)
+        return
     end
-    should_resolve && resolve()
     nothing
 end
 pin(pkg::AbstractString) = pin(pkg, "")
 
 function pin(pkg::AbstractString, ver::VersionNumber)
-    ispath(pkg,".git") || throw(PkgError("$pkg is not a git repo"))
-    Read.isinstalled(pkg) || throw(PkgError("$pkg cannot be pinned – not an installed package"))
-    avail = Read.available(pkg)
-    isempty(avail) && throw(PkgError("$pkg cannot be pinned – not a registered package"))
-    haskey(avail,ver) || throw(PkgError("$pkg – $ver is not a registered version"))
-    pin(pkg, avail[ver].sha1)
+    ver == Read.installed_version(pkg) && return pin(pkg, "")
+    throw(PkgError("Cannot pin other version numbers for a package from Mirrors."))
 end
 
 function update(branch::AbstractString, upkgs::Set{String})
@@ -381,16 +269,7 @@ function update(branch::AbstractString, upkgs::Set{String})
     end
     deferred_errors = CompositeException()
     avail = Read.available()
-    # this has to happen before computing free/fixed
-    for pkg in filter(Read.isinstalled, collect(keys(avail)))
-        try
-            Cache.prefetch(pkg, Read.url(pkg), [a.sha1 for (v,a)=avail[pkg]])
-        catch err
-            cex = CapturedException(err, catch_backtrace())
-            push!(deferred_errors, PkgError("Package $pkg: unable to update cache.", cex))
-        end
-    end
-    instd = Read.installed(avail)
+    instd = Read.installed()
     reqs = Reqs.parse("REQUIRE")
     if !isempty(upkgs)
         for (pkg, (v,f)) in instd
@@ -400,65 +279,20 @@ function update(branch::AbstractString, upkgs::Set{String})
         end
     end
     dont_update = Query.partial_update_mask(instd, avail, upkgs)
-    free  = Read.free(instd,dont_update)
-    for (pkg,ver) in free
+    free = Read.free(instd,dont_update)
+    fixeds = Read.fixed(instd,dont_update)
+    for (pkg,fixed) in fixeds
+        Read.ispinned(pkg) && continue 
+        pkg in dont_update && continue
         try
-            Cache.prefetch(pkg, Read.url(pkg), [a.sha1 for (v,a)=avail[pkg]])
+            Write.update(pkg, fixed.version)
         catch err
-            cex = CapturedException(err, catch_backtrace())
-            push!(deferred_errors, PkgError("Package $pkg: unable to update cache.", cex))
+            rethrow(err)
+            push!(deferred_errors, err)
         end
-    end
-    fixed = Read.fixed(avail,instd,dont_update)
-    creds = LibGit2.CachedCredentials()
-    try
-        stopupdate = false
-        for (pkg,ver) in fixed
-            ispath(pkg,".git") || continue
-            pkg in dont_update && continue
-            with(GitRepo, pkg) do repo
-                if LibGit2.isattached(repo)
-                    if LibGit2.isdirty(repo)
-                        warn("Package $pkg: skipping update (dirty)...")
-                    elseif Read.ispinned(repo)
-                        info("Package $pkg: skipping update (pinned)...")
-                    else
-                        prev_sha = string(LibGit2.head_oid(repo))
-                        success = true
-                        try
-                            LibGit2.fetch(repo, payload = Nullable(creds))
-                            LibGit2.reset!(creds)
-                            LibGit2.merge!(repo, fastforward=true)
-                        catch err
-                            cex = CapturedException(err, catch_backtrace())
-                            push!(deferred_errors, PkgError("Package $pkg cannot be updated.", cex))
-                            success = false
-                            stopupdate = isa(err, InterruptException)
-                        end
-                        if success
-                            post_sha = string(LibGit2.head_oid(repo))
-                            branch = LibGit2.branch(repo)
-                            info("Updating $pkg $branch...",
-                                prev_sha != post_sha ? " $(prev_sha[1:8]) → $(post_sha[1:8])" : "")
-                        end
-                    end
-                end
-            end
-            stopupdate && break
-            if haskey(avail,pkg)
-                try
-                    Cache.prefetch(pkg, Read.url(pkg), [a.sha1 for (v,a)=avail[pkg]])
-                catch err
-                    cex = CapturedException(err, catch_backtrace())
-                    push!(deferred_errors, PkgError("Package $pkg: unable to update cache.", cex))
-                end
-            end
-        end
-    finally
-        Base.securezero!(creds)
     end
     info("Computing changes...")
-    resolve(reqs, avail, instd, fixed, free, upkgs)
+    resolve(reqs, avail, instd, fixeds, free, upkgs)
     # Don't use instd here since it may have changed
     updatehook(sort!(collect(keys(installed()))))
 
@@ -471,8 +305,8 @@ end
 function resolve(
     reqs  :: Dict = Reqs.parse("REQUIRE"),
     avail :: Dict = Read.available(),
-    instd :: Dict = Read.installed(avail),
-    fixed :: Dict = Read.fixed(avail, instd),
+    instd :: Dict = Read.installed(),
+    fixed :: Dict = Read.fixed(instd),
     have  :: Dict = Read.free(instd),
     upkgs :: Set{String} = Set{String}()
 )
@@ -509,24 +343,6 @@ function resolve(
     changes = Query.diff(have, want, avail, fixed)
     isempty(changes) && return info("No packages to install, update or remove")
 
-    # prefetch phase isolates network activity, nothing to roll back
-    missing = []
-    for (pkg,(ver1,ver2)) in changes
-        vers = String[]
-        ver1 !== nothing && push!(vers,LibGit2.head(pkg))
-        ver2 !== nothing && push!(vers,Read.sha1(pkg,ver2))
-        append!(missing,
-            map(sha1->(pkg,(ver1,ver2),sha1),
-                Cache.prefetch(pkg, Read.url(pkg), vers)))
-    end
-    if !isempty(missing)
-        msg = "Missing package versions (possible metadata misconfiguration):"
-        for (pkg,ver,sha1) in missing
-            msg *= "  $pkg v$ver [$sha1[1:10]]\n"
-        end
-        throw(PkgError(msg))
-    end
-
     # try applying changes, roll back everything if anything fails
     changed = []
     imported = String[]
@@ -534,14 +350,14 @@ function resolve(
         for (pkg,(ver1,ver2)) in changes
             if ver1 === nothing
                 info("Installing $pkg v$ver2")
-                Write.install(pkg, Read.sha1(pkg,ver2))
+                Write.install(pkg, ver2)
             elseif ver2 === nothing
                 info("Removing $pkg v$ver1")
                 Write.remove(pkg)
             else
                 up = ver1 <= ver2 ? "Up" : "Down"
                 info("$(up)grading $pkg: v$ver1 => v$ver2")
-                Write.update(pkg, Read.sha1(pkg,ver2))
+                Write.update(pkg, ver2)
                 pkgsym = Symbol(pkg)
                 if Base.isbindingresolved(Main, pkgsym) && isa(getfield(Main, pkgsym), Module)
                     push!(imported, "- $pkg")
@@ -556,10 +372,10 @@ function resolve(
                 @recover Write.remove(pkg)
             elseif ver2 === nothing
                 info("Rolling back deleted $pkg to v$ver1")
-                @recover Write.install(pkg, Read.sha1(pkg,ver1))
+                @recover Write.install(pkg, ver1)
             else
                 info("Rolling back $pkg from v$ver2 to v$ver1")
-                @recover Write.update(pkg, Read.sha1(pkg,ver1))
+                @recover Write.update(pkg, ver1)
             end
         end
         rethrow(err)

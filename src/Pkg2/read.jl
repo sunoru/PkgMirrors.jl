@@ -2,7 +2,8 @@
 
 module Read
 
-import Base.LibGit2, ..Cache, ..Reqs, ...Pkg2.PkgError, ..Dir
+import Base.LibGit2, ..Reqs, ...Pkg2.PkgError, ..Dir
+import ...Mirrors
 using ..Types
 
 readstrip(path...) = strip(readstring(joinpath(path...)))
@@ -53,180 +54,45 @@ function latest(names=readdir("METADATA"))
     return pkgs
 end
 
-isinstalled(pkg::AbstractString) =
-    pkg != "METADATA" && pkg != "REQUIRE" && pkg[1] != '.' && isdir(pkg)
-
-function isfixed(pkg::AbstractString, prepo::LibGit2.GitRepo, avail::Dict=available(pkg))
-    isinstalled(pkg) || throw(PkgError("$pkg is not an installed package."))
-    isfile("METADATA", pkg, "url") || return true
-    ispath(pkg, ".git") || return true
-
-    LibGit2.isdirty(prepo) && return true
-    LibGit2.isattached(prepo) && return true
-    LibGit2.need_update(prepo)
-    if isnull(find("REQUIRE", LibGit2.GitIndex(prepo)))
-        isfile(pkg,"REQUIRE") && return true
-    end
-    head = string(LibGit2.head_oid(prepo))
-    for (ver,info) in avail
-        head == info.sha1 && return false
-    end
-
-    cache = Cache.path(pkg)
-    cache_has_head = if isdir(cache)
-        crepo = LibGit2.GitRepo(cache)
-        LibGit2.iscommit(head, crepo)
-    else
-        false
-    end
-    res = true
-    try
-        for (ver,info) in avail
-            if cache_has_head && LibGit2.iscommit(info.sha1, crepo)
-                if LibGit2.is_ancestor_of(head, info.sha1, crepo)
-                    res = false
-                    break
-                end
-            elseif LibGit2.iscommit(info.sha1, prepo)
-                if LibGit2.is_ancestor_of(head, info.sha1, prepo)
-                    res = false
-                    break
-                end
-            else
-                Base.warn_once("unknown $pkg commit $(info.sha1[1:8]), metadata may be ahead of package cache")
-            end
-        end
-    finally
-        cache_has_head && LibGit2.close(crepo)
-    end
-    return res
-end
+isinstalled(pkg::AbstractString) = pkg != "METADATA" && pkg != "REQUIRE" && Mirrors.hascache("versions", pkg)
 
 function ispinned(pkg::AbstractString)
-    ispath(pkg,".git") || return false
-    LibGit2.with(LibGit2.GitRepo, pkg) do repo
-        return ispinned(repo)
-    end
+    cache = Mirrors.getcache("versions", pkg)
+    cache === nothing && return false
+    tmp = split(cache, ' ')
+    return length(tmp) === 2 && tmp[2] == "pinned"
 end
 
-function ispinned(prepo::LibGit2.GitRepo)
-    LibGit2.isattached(prepo) || return false
-    br = LibGit2.branch(prepo)
-    # note: regex is based on the naming scheme used in Entry.pin()
-    return ismatch(r"^pinned\.[0-9a-f]{8}\.tmp$", br)
+function installed_version(pkg::AbstractString)
+    cache = Mirrors.getcache("versions", pkg)
+    cache === nothing ? typemin(VersionNumber) : VersionNumber(split(cache, ' ')[1])
 end
 
-function installed_version(pkg::AbstractString, prepo::LibGit2.GitRepo, avail::Dict=available(pkg))
-    ispath(pkg,".git") || return typemin(VersionNumber)
-
-    # get package repo head hash
-    local head
-    try
-        head = string(LibGit2.head_oid(prepo))
-    catch ex
-        # refs/heads/master does not exist
-        if isa(ex,LibGit2.GitError) &&
-            ex.code == LibGit2.Error.EUNBORNBRANCH
-            head = ""
-        else
-            rethrow(ex)
-        end
-    end
-    isempty(head) && return typemin(VersionNumber)
-
-    vers = collect(keys(filter((ver,info)->info.sha1==head, avail)))
-    !isempty(vers) && return maximum(vers)
-
-    cache = Cache.path(pkg)
-    cache_has_head = if isdir(cache)
-        crepo = LibGit2.GitRepo(cache)
-        LibGit2.iscommit(head, crepo)
-    else
-        false
-    end
-    ancestors = VersionNumber[]
-    descendants = VersionNumber[]
-    try
-        for (ver,info) in avail
-            sha1 = info.sha1
-            base = if cache_has_head && LibGit2.iscommit(sha1, crepo)
-                LibGit2.merge_base(crepo, head, sha1)
-            elseif LibGit2.iscommit(sha1, prepo)
-                LibGit2.merge_base(prepo, head, sha1)
-            else
-                Base.warn_once("unknown $pkg commit $(sha1[1:8]), metadata may be ahead of package cache")
-                continue
-            end
-            string(base) == sha1 && push!(ancestors,ver)
-            string(base) == head && push!(descendants,ver)
-        end
-    finally
-        cache_has_head && LibGit2.close(crepo)
-    end
-    both = sort!(intersect(ancestors,descendants))
-    isempty(both) || warn("$pkg: some versions are both ancestors and descendants of head: $both")
-    if !isempty(descendants)
-        v = minimum(descendants)
-        return VersionNumber(v.major, v.minor, v.patch, ("",), ())
-    elseif !isempty(ancestors)
-        v = maximum(ancestors)
-        return VersionNumber(v.major, v.minor, v.patch, (), ("",))
-    else
-        return typemin(VersionNumber)
-    end
-end
-
-function requires_path(pkg::AbstractString, avail::Dict=available(pkg))
+function requires_path(pkg::AbstractString)
     pkgreq = joinpath(pkg,"REQUIRE")
-    ispath(pkg,".git") || return pkgreq
-    repo = LibGit2.GitRepo(pkg)
-    head = LibGit2.with(LibGit2.GitRepo, pkg) do repo
-        LibGit2.isdirty(repo, "REQUIRE") && return pkgreq
-        LibGit2.need_update(repo)
-        if isnull(find("REQUIRE", LibGit2.GitIndex(repo)))
-            isfile(pkgreq) && return pkgreq
-        end
-        string(LibGit2.head_oid(repo))
-    end
-    for (ver,info) in avail
-        if head == info.sha1
-            return joinpath("METADATA", pkg, "versions", string(ver), "requires")
-        end
-    end
     return pkgreq
 end
 
-requires_list(pkg::AbstractString, avail::Dict=available(pkg)) =
-    collect(keys(Reqs.parse(requires_path(pkg,avail))))
+requires_list(pkg::AbstractString) =
+    collect(keys(Reqs.parse(requires_path(pkg))))
 
-requires_dict(pkg::AbstractString, avail::Dict=available(pkg)) =
-    Reqs.parse(requires_path(pkg,avail))
+requires_dict(pkg::AbstractString) =
+    Reqs.parse(requires_path(pkg))
 
-function installed(avail::Dict=available())
+function installed()
     pkgs = Dict{String,Tuple{VersionNumber,Bool}}()
-    for pkg in readdir()
-        isinstalled(pkg) || continue
-        ap = get(avail,pkg,Dict{VersionNumber,Available}())
-        if ispath(pkg,".git")
-            LibGit2.with(LibGit2.GitRepo, pkg) do repo
-                ver = installed_version(pkg, repo, ap)
-                fixed = isfixed(pkg, repo, ap)
-                pkgs[pkg] = (ver, fixed)
-            end
-        else
-            pkgs[pkg] = (typemin(VersionNumber), true)
-        end
+    for pkg in readdir(joinpath(Mirrors.CACHEPATH, "versions"))
+        pkgs[pkg] = (installed_version(pkg), ispinned(pkg))
     end
     return pkgs
 end
 
-function fixed(avail::Dict=available(), inst::Dict=installed(avail), dont_update::Set{String}=Set{String}(),
+function fixed(inst::Dict=installed(), dont_update::Set{String}=Set{String}(),
     julia_version::VersionNumber=VERSION)
     pkgs = Dict{String,Fixed}()
     for (pkg,(ver,fix)) in inst
         (fix || pkg in dont_update) || continue
-        ap = get(avail,pkg,Dict{VersionNumber,Available}())
-        pkgs[pkg] = Fixed(ver,requires_dict(pkg,ap))
+        pkgs[pkg] = Fixed(ver,requires_dict(pkg))
     end
     pkgs["julia"] = Fixed(julia_version)
     return pkgs

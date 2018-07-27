@@ -17,6 +17,7 @@ export Dir, Types, Reqs, Cache, Read, Query, Resolve, Write, Entry
 export dir, init, rm, add, available, installed, status, clone, checkout,
        update, resolve, test, build, free, pin, PkgError, setprotocol!
 
+import ..Mirrors
 import ..Mirrors: metadata_url
 
 const META_BRANCH = "metadata-v2"
@@ -42,7 +43,9 @@ function Base.showerror(io::IO, pkgerr::PkgError)
     end
 end
 
-for file in split("dir types reqs cache read query resolve write entry")
+include("PlatformEngines.jl")
+
+for file in split("dir types reqs read query resolve write entry")
     include("$file.jl")
 end
 const cd = Dir.cd
@@ -86,6 +89,7 @@ custom METADATA setup.
 init(meta::AbstractString=metadata_url(), branch::AbstractString=META_BRANCH) = Dir.init(meta,branch)
 
 function __init__()
+    isdir(Mirrors.CACHEPATH, "versions") || mkpath(joinpath(Mirrors.CACHEPATH, "versions"))
     vers = "v$(VERSION.major).$(VERSION.minor)"
     vers = ccall(:jl_uses_cpuid_tag, Cint, ()) == 0 ? vers :
         joinpath(vers,hex(ccall(:jl_cpuid_tag, UInt64, ()), 2*sizeof(UInt64)))
@@ -160,23 +164,6 @@ status(io::IO=STDOUT) = cd(Entry.status,io)
 Prints out a summary of what version and state `pkg`, specifically, is in.
 """
 status(pkg::AbstractString, io::IO=STDOUT) = cd(Entry.status,io,splitjl(pkg))
-
-"""
-    clone(pkg)
-
-If `pkg` has a URL registered in `Pkg2.dir("METADATA")`, clone it from that URL on the
-default branch. The package does not need to have any registered versions.
-"""
-clone(url_or_pkg::AbstractString) = cd(Entry.clone,url_or_pkg)
-
-"""
-    clone(url, [pkg])
-
-Clone a package directly from the git URL `url`. The package does not need to be registered
-in `Pkg2.dir("METADATA")`. The package repo is cloned by the name `pkg` if provided; if not
-provided, `pkg` is determined automatically from `url`.
-"""
-clone(url::AbstractString, pkg::AbstractString) = cd(Entry.clone,url,splitjl(pkg))
 
 """
     checkout(pkg, [branch="master"]; merge=true, pull=true)
@@ -282,13 +269,5 @@ test(pkgs::AbstractString...; coverage::Bool=false) = cd(Entry.test,AbstractStri
 List the packages that have `pkg` as a dependency.
 """
 dependents(pkg::AbstractString) = Reqs.dependents(splitjl(pkg))
-
-"""
-    setprotocol!(proto)
-
-Set the protocol used to access GitHub-hosted packages. Defaults to 'https', with a blank
-`proto` delegating the choice to the package developer.
-"""
-setprotocol!(proto::AbstractString) = Cache.setprotocol!(proto)
 
 end # module

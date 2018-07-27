@@ -17,8 +17,7 @@ export PKG
 const PKG = ISPKG3 ? Pkg3 : Pkg2
 const MIRRORS = Dict{String, String}()
 const CURRENT = Ref{Mirror}()
-const BUILDPATH = joinpath(@__DIR__, "../build")
-const CACHEFILE = joinpath(BUILDPATH, "current.txt")
+const CACHEPATH = joinpath(@__DIR__, "../cache")
 
 
 function __init__()
@@ -28,10 +27,12 @@ function __init__()
             MIRRORS[tmp[1]] = tmp[2]
         end
     end
-    isdir(BUILDPATH) || mkdir(BUILDPATH)
-    isfile(CACHEFILE) && open(CACHEFILE) do fi
-        tmp = split(readline(fi), ' ')
+    isdir(CACHEPATH) || mkdir(CACHEPATH)
+    current_pkg = getcache("current.txt")
+    if current_pkg !== nothing
+        tmp = split(current_pkg, ' ')
         setmirror(tmp[1], tmp[2])
+        info("Using saved mirror: $(tmp[1]) ($(tmp[2]))")
     end
 end
 

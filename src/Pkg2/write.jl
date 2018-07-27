@@ -2,63 +2,84 @@
 
 module Write
 
-import Base.LibGit2, ..Cache, ..Read, ...Pkg2.PkgError
-importall Base.LibGit2
+import ..Read, ..BinaryProvider, ...Pkg2.PkgError
+import ...Mirrors
 
-function prefetch(pkg::AbstractString, sha1::AbstractString)
-    isempty(Cache.prefetch(pkg, Read.url(pkg), sha1)) && return
-    throw(PkgError("$pkg: couldn't find commit $(sha1[1:10])"))
+function get_archive_url_for_version(pkg, ver)
+    mirror = Mirrors.current()
+    return "$(mirror.url)/packages/$pkg/General/$pkg-$ver.tar.gz"
 end
 
-function fetch(repo::GitRepo, pkg::AbstractString, sha1::AbstractString)
-    cache = Cache.path(pkg)
-    LibGit2.fetch(repo, remoteurl=cache, refspecs=["+refs/*:refs/remotes/cache/*"])
-    LibGit2.need_update(repo)
-    LibGit2.iscommit(sha1, repo) && return
-    f = with(GitRepo, cache) do repo
-         LibGit2.iscommit(sha1, repo)
-    end ? "fetch" : "prefetch"
-    url = Read.issue_url(pkg)
-    if isempty(url)
-        throw(PkgError("$pkg: $f failed to get commit $(sha1[1:10]), please file a bug report with the package author."))
-    else
-        throw(PkgError("$pkg: $f failed to get commit $(sha1[1:10]), please file an issue at $url"))
+function prefetch(pkg::AbstractString, ver::VersionNumber)
+    pkg == "julia" && return
+    dir = joinpath(".cache", "$pkg-$ver")
+    mkpath(dir)
+    length(filter!(x -> x != "pax_global_header", readdir(dir))) == 1 && return
+    if isdir(".trash/$pkg-$ver")
+        mv(".trash/$pkg-$ver", joinpath(dir, "from_trash"))
+        return
     end
-end
-
-function checkout(repo::GitRepo, pkg::AbstractString, sha1::AbstractString)
-    LibGit2.set_remote_url(repo, Cache.normalize_url(Read.url(pkg)))
-    LibGit2.checkout!(repo, sha1)
-end
-
-function install(pkg::AbstractString, sha1::AbstractString)
-    prefetch(pkg, sha1)
-    repo = if isdir(".trash/$pkg")
-        mv(".trash/$pkg", "./$pkg") #TODO check for newer version in cache before moving
-        GitRepo(pkg)
-    else
-        LibGit2.clone(Cache.path(pkg), pkg)
-    end
+    rm(dir; force=true, recursive=true)
+    mkpath(dir)
+    # Copied from Pkg3.
+    archive_url = get_archive_url_for_version(pkg, ver)
+    path = tempname() * randstring(6) * ".tar.gz"
+    url_success = true
+    cmd = BinaryProvider.gen_download_cmd(archive_url, path);
     try
-        fetch(repo, pkg, sha1)
-        checkout(repo, pkg, sha1)
-    finally
-        close(repo)
+        run(cmd, (DevNull, DevNull, DevNull))
+    catch e
+        e isa InterruptException && rethrow(e)
+        warn("failed to download from $(archive_url)")
+        println(STDERR, e)
+        url_success = false
     end
+    url_success || return false
+    cmd = BinaryProvider.gen_unpack_cmd(path, dir);
+    # Might fail to extract an archive (Pkg#190)
+    try
+        run(cmd, (DevNull, DevNull, DevNull))
+    catch e
+        e isa InterruptException && rethrow(e)
+        warn("failed to extract archive downloaded from $(archive_url)")
+        println(STDERR, e)
+        url_success = false
+    end
+    url_success || return false
+    Base.rm(path; force = true)
 end
 
-function update(pkg::AbstractString, sha1::AbstractString)
-    prefetch(pkg, sha1)
-    with(GitRepo, pkg) do repo
-        fetch(repo, pkg, sha1)
-        checkout(repo, pkg, sha1)
-    end
+function fetch(pkg::AbstractString, ver::VersionNumber)
+    pkg == "julia" && return
+    dir = joinpath(".cache", "$pkg-$ver")
+    dirs = readdir(dir)
+    # 7z on Win might create this spurious file
+    filter!(x -> x != "pax_global_header", dirs)
+    @assert length(dirs) == 1
+    mv(joinpath(dir, dirs[1]), "./$pkg")
+    Mirrors.setcache(ver, "versions", pkg)
+    return true
+end
+
+function install(pkg::AbstractString, ver::VersionNumber)
+    prefetch(pkg, ver)
+    fetch(pkg, ver)
+end
+
+function update(pkg::AbstractString, ver::VersionNumber)
+    prefetch(pkg, ver)
+    remove(pkg)
+    fetch(pkg, ver)
 end
 
 function remove(pkg::AbstractString)
+    pkg == "julia" && return
     isdir(".trash") || mkdir(".trash")
-    ispath(".trash/$pkg") && rm(".trash/$pkg", recursive=true)
-    mv(pkg, ".trash/$pkg")
+    ver = Read.installed_version(pkg)
+    name = "$pkg-$ver"
+    ispath(".trash/$name") && rm(".trash/$name", recursive=true)
+    mv(pkg, ".trash/$name")
+    Mirrors.delcache("versions", pkg)
 end
 
 end # module

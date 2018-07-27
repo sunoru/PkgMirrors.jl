@@ -1,1 +1,1 @@
-zju https://mirrors.zju.edu.cn/julia
+ZJU https://mirrors.zju.edu.cn/julia

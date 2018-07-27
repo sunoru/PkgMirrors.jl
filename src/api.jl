@@ -6,9 +6,7 @@ current() = isdefined(CURRENT, :x) ? CURRENT.x : nothing
 
 function setmirror(name::AbstractString, url::AbstractString)
     CURRENT.x = Mirror(name, url)
-    open(CACHEFILE, "w") do fo
-        print(fo, join([name, url], ' '))
-    end
+    setcache("$name $url", "current.txt")
     return CURRENT.x
 end
 
