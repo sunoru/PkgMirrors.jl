@@ -42,7 +42,7 @@ function init(meta::AbstractString=metadata_url(), branch::AbstractString=META_B
     meta = string(meta, ".git")
     metadata_dir = joinpath(dir, "METADATA")
     if isdir(metadata_dir)
-        info("Package directory $dir is already initialized.")
+        info("Package directory $dir is already initialized. Set its remote to $meta.")
         LibGit2.set_remote_url(metadata_dir, meta)
         return
     end

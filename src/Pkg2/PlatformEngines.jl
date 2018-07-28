@@ -178,13 +178,12 @@ function probe_platform_engines!(;verbose::Bool = false)
         # to download a file, given a path to the powershell executable
         psh_download = (psh_path) -> begin
             return (url, path) -> begin
-                webclient_code = """
+                webclient_code = replace("""
                 [System.Net.ServicePointManager]::SecurityProtocol =
                     [System.Net.SecurityProtocolType]::Tls12;
                 \$webclient = (New-Object System.Net.Webclient);
                 \$webclient.DownloadFile(\"$url\", \"$path\")
-                """
-                replace(webclient_code, "\n" => " ")
+                """, "\n", " ")
                 return `$psh_path -NoProfile -Command "$webclient_code"`
             end
         end
