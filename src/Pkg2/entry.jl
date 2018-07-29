@@ -417,7 +417,7 @@ function build(pkg::AbstractString, build_file::AbstractString, errfile::Abstrac
                     evalfile(build_file)
                 end
             catch err
-                Base.Pkg2.Entry.warnbanner(err, label="[ ERROR: \$pkg ]")
+                Mirrors.Pkg2.Entry.warnbanner(err, label="[ ERROR: \$pkg ]")
                 serialize(f, pkg)
                 serialize(f, err)
             end
