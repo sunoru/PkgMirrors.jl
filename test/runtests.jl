@@ -1,17 +1,11 @@
 using Mirrors
 
-if VERSION < v"0.7-"
-    import Base.Test: @test
-else
-    import Test: @test
-end
+import Base.Test: @test
 
-@test availables() == ["zju"]
+@test availables() == ["ZJU"]
 
 @test current() == nothing
 
-setmirror("zju")
+setmirror("ZJU")
 
-@test current() == Mirror("zju", "https://mirrors.zju.edu.cn/julia")
-
-include(Mirrors.ISPKG3 ? "pkg3.jl" : "pkg2.jl")
+@test current() == Mirror("ZJU", "https://mirrors.zju.edu.cn/julia")
