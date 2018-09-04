@@ -1,13 +1,21 @@
-using Mirrors
+import Mirrors
 import Pkg
 import Test: @test
 
-@test availables() == ["ZJU"]
+Mirrors.clear()
 
-@test current() == nothing
+@test Mirrors.availables() == ["ZJU"]
 
-setmirror("ZJU")
+@test Mirrors.current() == nothing
 
-@test current() == Mirror("ZJU", "https://mirrors.zju.edu.cn/julia")
+Mirrors.setmirror("ZJU")
+
+@test Mirrors.current() == Mirrors.Mirror("ZJU", "https://mirrors.zju.edu.cn/julia")
+
+Pkg.update()
 
 Pkg.add("RandomNumbers")
+
+Mirrors.deactivate()
+
+Mirrors.clear()

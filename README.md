@@ -85,6 +85,8 @@ julia> # Type "]" to enter Pkg REPL-mode.
 
 You can find that the URL of the git repo for General registry has been modified to the one `Mirrors.jl` provides.
 
+If a package is not on the mirror it will have a fallback to use `git clone` from GitHub.
+
 When you exit Julia the changes to your registries will be undone automatically:
 
 ```julia

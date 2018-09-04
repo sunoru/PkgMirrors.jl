@@ -1,38 +1,36 @@
 module PKG
 
 import Pkg
-import JSON
 
 import ..Utils: current, download_cache, cachefile
 
 const CACHEDICT = Dict{String, Any}()
 
-function getstatus(baseurl, update=false)
-    status_file = cachefile("status.json")
-    if update || !ispath(status_file)
+function get_registry_list(baseurl, update=false)
+    registries_file = cachefile("registries.txt")
+    if update || !ispath(registries_file)
         @info "Updating mirror information..."
-        download_cache(joinpath(baseurl, "status.json"), "status.json")
+        download_cache(joinpath(baseurl, "registries", "list.txt"), "registries.txt")
     end
-    status = open(status_file) do io
-        JSON.parse(io)
+    registries = open(registries_file) do io
+        readlines(io)
     end
-    return status
+    return registries
 end
 
 function activate()
     baseurl = current().url
-    status = getstatus(baseurl, true)
-    registry_names = keys(status["registries"]["registries"])
+    registry_list = get_registry_list(baseurl, true)
     original_dict = CACHEDICT["default_registries"] = copy(Pkg.Types.DEFAULT_REGISTRIES)
     for (x, _) in Pkg.Types.DEFAULT_REGISTRIES
-        if x in registry_names
+        if x in registry_list
             Pkg.Types.DEFAULT_REGISTRIES[x] = joinpath(baseurl, "registries", "$(x).git")
         end
     end
     registries = Pkg.Types.registries()
     for registry in registries
         name = basename(registry)
-        if name in registry_names
+        if name in registry_list
             git_config_file = joinpath(registry, ".git", "config")
             cfg = read(git_config_file, String)
             cfg = replace(cfg, original_dict[name] => Pkg.Types.DEFAULT_REGISTRIES[name])
@@ -54,13 +52,12 @@ end
 
 function deactivate()
     baseurl = current().url
-    status = getstatus(baseurl)
-    registry_names = keys(status["registries"]["registries"])
+    registry_list = get_registry_list(baseurl, true)
     registries = Pkg.Types.registries()
     original_dict = CACHEDICT["default_registries"]
     for registry in registries
         name = basename(registry)
-        if name in registry_names
+        if name in registry_list
             git_config_file = joinpath(registry, ".git", "config")
             cfg = read(git_config_file, String)
             cfg = replace(cfg, Pkg.Types.DEFAULT_REGISTRIES[name] => original_dict[name])

@@ -56,7 +56,7 @@ end
 function clear()
     current() === nothing || deactivate()
     delcache("current.txt")
-    delcache("status.json")
+    delcache("registries.txt")
     @info "Cache clear."
 end
 
