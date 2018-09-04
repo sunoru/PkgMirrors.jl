@@ -5,3 +5,5 @@
 *.swp
 build/
 /cache/
+
+*.bak

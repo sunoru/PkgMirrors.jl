@@ -2,4 +2,8 @@ name = "Mirrors"
 uuid = "879c85a0-8f14-11e8-0652-af3058d99549"
 author = ["Sunoru <s@sunoru.com>"]
 repo = "https://github.com/sunoru/Mirrors.jl.git"
-version = "0.1.0"
+version = "1.0.0"
+
+[deps]
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"

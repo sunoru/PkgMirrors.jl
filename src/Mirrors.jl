@@ -4,21 +4,23 @@ module Mirrors
 export Mirror
 include("types.jl")
 
-export availables, current, setmirror
-include("api.jl")
-
 include("utils.jl")
+const current = Utils.current
+export current
 
-export Pkg2, Pkg3
-const ISPKG3 = VERSION >= v"0.7"
-include(joinpath(ISPKG3 ? "Pkg3" : "Pkg2", "pkg.jl"))
+const MIRRORS = Dict{String, String}()
 
 export PKG
-const PKG = ISPKG3 ? Pkg3 : Pkg2
-const MIRRORS = Dict{String, String}()
-const CURRENT = Ref{Mirror}()
-const CACHEPATH = joinpath(@__DIR__, "../cache")
+include("pkg.jl")
 
+include("api.jl")
+
+const availables = API.availables
+const setmirror = API.setmirror
+const activate = API.activate
+const deactivate = API.deactivate
+const clear = API.clear
+export availables, setmirror, activate, deactivate, clear
 
 function __init__()
     open(joinpath(@__DIR__, "../data/mirror_list.txt")) do fi
@@ -27,13 +29,7 @@ function __init__()
             MIRRORS[tmp[1]] = tmp[2]
         end
     end
-    isdir(CACHEPATH) || mkdir(CACHEPATH)
-    current_pkg = getcache("current.txt")
-    if current_pkg !== nothing
-        tmp = split(current_pkg, ' ')
-        setmirror(tmp[1], tmp[2])
-        info("Using saved mirror: $(tmp[1]) ($(tmp[2]))")
-    end
+    API.activate(first=true)
 end
 
 end

@@ -1,7 +1,17 @@
-metadata_url(mirror::Mirror=current()) = "$(mirror.url)/metadata/METADATA.jl"
+module Utils
+
+import Mirrors: Mirror
+
+const CURRENT = Ref{Union{Mirror, Nothing}}(nothing)
+
+current() = CURRENT.x
+
+const CACHEPATH = joinpath(@__DIR__, "../cache")
+
+cachefile(name::AbstractString...) = joinpath(CACHEPATH, name...)
 
 function setcache(value, name::AbstractString...)
-    filename = joinpath(CACHEPATH, name...)
+    filename = cachefile(name...)
     path = dirname(filename)
     isdir(path) || mkpath(path)
     try
@@ -15,7 +25,7 @@ function setcache(value, name::AbstractString...)
 end
 
 function getcache(name::AbstractString...)
-    filename = joinpath(CACHEPATH, name...)
+    filename = cachefile(name...)
     isfile(filename) || return nothing
     value = ""
     open(filename) do fi
@@ -25,8 +35,18 @@ function getcache(name::AbstractString...)
 end
 
 function delcache(name::AbstractString...)
-    filename = joinpath(CACHEPATH, name...)
+    filename = cachefile(name...)
     isfile(filename) && Base.rm(filename)
 end
 
-hascache(name::AbstractString...) = isfile(joinpath(CACHEPATH, name...))
+hascache(name::AbstractString...) = isfile(cachefile(name...))
+
+function download_cache(url::AbstractString, localfile::AbstractString)
+    download(url, cachefile(localfile))
+end
+
+function __init__()
+    isdir(CACHEPATH) || mkdir(CACHEPATH)
+end
+
+end
