@@ -1,10 +1,10 @@
 module Utils
 
-import Mirrors: Mirror
+import ..Types: Mirror
 
 const CURRENT = Ref{Union{Mirror, Nothing}}(nothing)
 
-current() = CURRENT.x
+current() = CURRENT[]
 
 const CACHEPATH = joinpath(@__DIR__, "../cache")
 

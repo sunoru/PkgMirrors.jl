@@ -1,8 +1,9 @@
 __precompile__(true)
 module Mirrors
 
-export Mirror
 include("types.jl")
+const Mirror = Types.Mirror
+export Mirror
 
 include("utils.jl")
 const current = Utils.current
@@ -30,6 +31,9 @@ function __init__()
         end
     end
     API.activate(first=true)
+    finalizer(Types.FINALIZER) do _
+        current() === nothing || API.deactivate()
+    end
 end
 
 end

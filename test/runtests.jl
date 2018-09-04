@@ -1,4 +1,5 @@
 using Mirrors
+import Pkg
 import Test: @test
 
 @test availables() == ["ZJU"]
