@@ -3,7 +3,7 @@
 *Use alternative mirrors to manage your packages for Julia.*
 
 Linux, OSX:
-[![Build Status](https://travis-ci.org/sunoru/Mirrors.jl.svg?branch=master)](https://travis-ci.org/sunoru/Mirrors.jl)
+[![Build Status](https://travis-ci.com/sunoru/Mirrors.jl.svg?branch=master)](https://travis-ci.com/sunoru/Mirrors.jl)
 
 Windows:
 [![Build status](https://ci.appveyor.com/api/projects/status/jw8aik6dcug8io06?svg=true)](https://ci.appveyor.com/project/sunoru/mirrors-jl)
