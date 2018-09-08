@@ -30,8 +30,8 @@ function activate()
     registries = Pkg.Types.registries()
     for registry in registries
         name = basename(registry)
-        if name in registry_list
-            git_config_file = joinpath(registry, ".git", "config")
+        git_config_file = joinpath(registry, ".git", "config")
+        if name in registry_list && isfile(git_config_file)
             cfg = read(git_config_file, String)
             cfg = replace(cfg, original_dict[name] => Pkg.Types.DEFAULT_REGISTRIES[name])
             write(git_config_file, cfg)

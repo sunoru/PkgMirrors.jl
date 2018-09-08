@@ -1,8 +1,8 @@
 module Utils
 
-import ..Types: Mirror
+import ..Types: PkgMirror
 
-const CURRENT = Ref{Union{Mirror, Nothing}}(nothing)
+const CURRENT = Ref{Union{PkgMirror, Nothing}}(nothing)
 
 current() = CURRENT[]
 

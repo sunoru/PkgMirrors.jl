@@ -1,7 +1,7 @@
-name = "Mirrors"
+name = "PkgMirrors"
 uuid = "879c85a0-8f14-11e8-0652-af3058d99549"
 author = ["Sunoru <s@sunoru.com>"]
-repo = "https://github.com/sunoru/Mirrors.jl.git"
+repo = "https://github.com/sunoru/PkgMirrors.jl.git"
 version = "1.0.0"
 
 [deps]

@@ -1,9 +1,9 @@
 __precompile__(true)
-module Mirrors
+module PkgMirrors
 
 include("types.jl")
-const Mirror = Types.Mirror
-export Mirror
+const PkgMirror = Types.PkgMirror
+export PkgMirror
 
 include("utils.jl")
 const current = Utils.current

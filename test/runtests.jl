@@ -1,21 +1,21 @@
-import Mirrors
+import PkgMirrors
 import Pkg
 import Test: @test
 
-Mirrors.clear()
+PkgMirrors.clear()
 
-@test Mirrors.availables() == ["ZJU"]
+@test PkgMirrors.availables() == ["ZJU"]
 
-@test Mirrors.current() == nothing
+@test PkgMirrors.current() == nothing
 
-Mirrors.setmirror("ZJU")
+PkgMirrors.setmirror("ZJU")
 
-@test Mirrors.current() == Mirrors.Mirror("ZJU", "https://mirrors.zju.edu.cn/julia")
+@test PkgMirrors.current() == PkgMirrors.PkgMirror("ZJU", "https://mirrors.zju.edu.cn/julia")
 
 Pkg.update()
 
 Pkg.add("RandomNumbers")
 
-Mirrors.deactivate()
+PkgMirrors.deactivate()
 
-Mirrors.clear()
+PkgMirrors.clear()

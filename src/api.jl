@@ -1,14 +1,14 @@
 module API
 
-import Mirrors: MIRRORS
-import ..Types: Mirror
+import PkgMirrors: MIRRORS
+import ..Types: PkgMirror
 import ..Utils: setcache, getcache, delcache, current, CURRENT
 import ..PKG
 
 availables() = collect(keys(MIRRORS))
 
 function setmirror(name::AbstractString, url::AbstractString)
-    CURRENT[] = Mirror(name, url)
+    CURRENT[] = PkgMirror(name, url)
     try
         PKG.activate()
     catch e
@@ -16,7 +16,7 @@ function setmirror(name::AbstractString, url::AbstractString)
         rethrow(e)
     end
     setcache("$name $url", "current.txt")
-    @info "Mirror $name activated."
+    @info "PkgMirror $name activated."
     return CURRENT[]
 end
 
@@ -49,7 +49,7 @@ function deactivate()
     else
         PKG.deactivate()
         CURRENT[] = nothing
-        @info "Mirror $(current_mirror.name) deactivated."
+        @info "PkgMirror $(current_mirror.name) deactivated."
     end
 end
 
