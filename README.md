@@ -12,6 +12,8 @@ Code Coverage:
 [![Coverage Status](https://coveralls.io/repos/sunoru/PkgMirrors.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/sunoru/PkgMirrors.jl?branch=master)
 [![codecov.io](http://codecov.io/github/sunoru/PkgMirrors.jl/coverage.svg?branch=master)](http://codecov.io/github/sunoru/PkgMirrors.jl?branch=master)
 
+[中文文档](./README-zh_cn.md)
+
 `PkgMirrors.jl` is a client for boosting your download by using a mirror when you have a slow connection to GitHub (for example, in China).
 
 Current supported mirrors (see [mirror_list.txt](./data/mirror_list.txt)):
