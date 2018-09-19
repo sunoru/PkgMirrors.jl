@@ -30,9 +30,9 @@ julia> # Type "]" to enter Pkg REPL-mode.
 
 (v1.0) pkg> add PkgMirrors  # Install from the official registry.
 
-(v1.0) pkg> add https://github.com/sunoru/PkgMirrors.jl.git  # Install from source code.
+(v1.0) pkg> add https://github.com/sunoru/PkgMirrors.jl  # Install from source code.
 
-(v1.0) pkg> add https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git@v1.0.0  # Install from the mirror. (Recommended)
+(v1.0) pkg> add https://mirrors.zju.edu.cn/julia/Mirrors.jl.git@v1.0.0  # Install from the mirror. (Recommended)
 ```
 
 You will probably prefer the third way, for it is why you want to use `PkgMirrors.jl`. The URL can be replaced by that of your preferred mirror. Remove `#v1.0.0` if you want to use the developing branch.
