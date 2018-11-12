@@ -1,1 +1,2 @@
 ZJU https://mirrors.zju.edu.cn/julia
+USTC https://mirrors.zju.edu.cn/julia 
