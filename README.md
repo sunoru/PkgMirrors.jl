@@ -14,10 +14,12 @@ Code Coverage:
 
 [中文文档](./README-zh_cn.md)
 
-`PkgMirrors.jl` is a client for boosting your download by using a mirror when you have a slow connection to GitHub (for example, in China).
+`PkgMirrors.jl` is a client for boosting your download by using a mirror when you have a slow connection to
+GitHub (for example, in China).
 
 Current supported mirrors (see [mirror_list.txt](./data/mirror_list.txt)):
 - ZJU (https://mirrors.zju.edu.cn/julia/)
+- USTC (https://mirrors.ustc.edu.cn/julia/)
 
 ## Installation
 
@@ -35,7 +37,8 @@ julia> # Type "]" to enter Pkg REPL-mode.
 (v1.0) pkg> add https://mirrors.zju.edu.cn/julia/Mirrors.jl.git@v1.0.0  # Install from the mirror. (Recommended)
 ```
 
-You will probably prefer the third way, for it is why you want to use `PkgMirrors.jl`. The URL can be replaced by that of your preferred mirror. Remove `#v1.0.0` if you want to use the developing branch.
+You will probably prefer the third way, for it is why you want to use `PkgMirrors.jl`. The URL can be
+replaced by that of your preferred mirror. Remove `#v1.0.0` if you want to use the developing branch.
 
 ## Usage
 
@@ -45,8 +48,9 @@ To start with `PkgMirrors.jl`, import the package and set a mirror for your `Pkg
 julia> import PkgMirrors
 
 julia> PkgMirrors.availables()  # to list available mirrors.
-1-element Array{String,1}:
+2-element Array{String,1}:
  "ZJU"
+ "USTC"
 
 julia> PkgMirrors.setmirror("ZJU")  # to set the mirror.
 [ Info: Updating mirror information...
@@ -63,7 +67,8 @@ julia> import PkgMirrors
 [ Info: PkgMirror ZJU activated.
 ```
 
-Once a mirror is selected and activated, you are free to use the standard `Pkg` to install or update packages. For example:
+Once a mirror is selected and activated, you are free to use the standard `Pkg` to install or update
+packages. For example:
 
 ```julia
 julia> # Type "]" to enter Pkg REPL-mode.
@@ -85,7 +90,8 @@ julia> # Type "]" to enter Pkg REPL-mode.
   [e6cf234a] + RandomNumbers v1.0.1
 ```
 
-You can find that the URL of the git repo for General registry has been modified to the one `PkgMirrors.jl` provides.
+You can find that the URL of the git repo for General registry has been modified to the one `PkgMirrors.jl`
+provides.
 
 If a package is not on the mirror it will have a fallback to use `git clone` from GitHub.
 
@@ -108,14 +114,17 @@ julia> PkgMirrors.clear()
 
 ## New mirror?
 
-See [julia-mirror](https://github.com/sunoru/julia-mirror) for how to build a mirror. You can file an issue or open a pull request to add a new mirror into [the mirror list](./data/mirror_list.txt).
+See [julia-mirror](https://github.com/sunoru/julia-mirror) for how to build a mirror. You can file an issue
+or open a pull request to add a new mirror into [the mirror list](./data/mirror_list.txt).
 
 ## Issues
 
 Known:
-- `PkgMirrors.jl` is not able to deal with packages not in General registry at the moment. It is not vital yet, since the only mirror doesn't provide other registries as well.
+- `PkgMirrors.jl` is not able to deal with packages not in General registry at the moment. It is not vital
+yet, since current working mirrors don't provide other registries as well.
 
-You are welcome to [file an issue](https://github.com/sunoru/PkgMirrors.jl/issues/new) if having any questions.
+You are welcome to [file an issue](https://github.com/sunoru/PkgMirrors.jl/issues/new) if having any
+questions.
 
 ## License
 

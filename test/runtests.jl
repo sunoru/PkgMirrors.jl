@@ -4,13 +4,15 @@ import Test: @test
 
 PkgMirrors.clear()
 
-@test PkgMirrors.availables() == ["ZJU"]
+@test PkgMirrors.availables()[1] == "ZJU"
 
 @test PkgMirrors.current() == nothing
 
 PkgMirrors.setmirror("ZJU")
 
 @test PkgMirrors.current() == PkgMirrors.PkgMirror("ZJU", "https://mirrors.zju.edu.cn/julia")
+
+PkgMirrors.setmirror("USTC")
 
 Pkg.update()
 
