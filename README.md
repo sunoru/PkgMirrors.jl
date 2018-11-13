@@ -6,7 +6,7 @@ Linux, OSX:
 [![Build Status](https://travis-ci.com/sunoru/PkgMirrors.jl.svg?branch=master)](https://travis-ci.com/sunoru/PkgMirrors.jl)
 
 Windows:
-[![Build status](https://ci.appveyor.com/api/projects/status/jw8aik6dcug8io06?svg=true)](https://ci.appveyor.com/project/sunoru/pkg-mirrors-jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/jw8aik6dcug8io06?svg=true)](https://ci.appveyor.com/project/sunoru/mirrors-jl)
 
 Code Coverage:
 [![Coverage Status](https://coveralls.io/repos/sunoru/PkgMirrors.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/sunoru/PkgMirrors.jl?branch=master)
@@ -34,7 +34,7 @@ julia> # Type "]" to enter Pkg REPL-mode.
 
 (v1.0) pkg> add https://github.com/sunoru/PkgMirrors.jl  # Install from source code.
 
-(v1.0) pkg> add https://mirrors.zju.edu.cn/julia/Mirrors.jl.git@v1.0.0  # Install from the mirror. (Recommended)
+(v1.0) pkg> add https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git@v1.1.0  # Install from the mirror. (Recommended)
 ```
 
 You will probably prefer the third way, for it is why you want to use `PkgMirrors.jl`. The URL can be
