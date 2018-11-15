@@ -6,6 +6,7 @@
 
 目前支持的镜像站（参见[镜像站列表](./data/mirror_list.txt)）：
 - 浙江大学开源镜像站（https://mirrors.zju.edu.cn/julia/）
+- 中国科学技术大学开源软件镜像（https://mirrors.ustc.edu.cn/julia/）
 
 ## 安装
 
@@ -101,7 +102,7 @@ julia> PkgMirrors.clear()
 ## 问题
 
 目前已知的问题：
-- `PkgMirrors.jl` 无法处理 General 登记簿以外的软件包（虽然现在唯一的镜像站也并不提供其它登记簿）。
+- `PkgMirrors.jl` 无法处理 General 登记簿以外的软件包（虽然现在镜像站也都并不提供其它登记簿）。
 
 如果有任何疑问，欢迎来[提 issue](https://github.com/sunoru/PkgMirrors.jl/issues/new) 或是在 Discourse 论坛（[英文](https://discourse.julialang.org)或[中文](http://discourse.juliacn.com)的社区都可以）里发表问题的同时 @sunoru 。
 
