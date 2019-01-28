@@ -25,9 +25,9 @@ function setmirror(name::AbstractString)
     setmirror(name, MIRRORS[name])
 end
 
-function activate(;first=false)
-    if current() !== nothing
-        @warn "Already activated"
+function activate(;first=true)
+    if activated()
+        @warn "Already activated."
         return
     end
     current_mirror = getcache("current.txt")
@@ -36,7 +36,7 @@ function activate(;first=false)
         @info "Using saved mirror: $(tmp[1]) ($(tmp[2]))"
         mirror = setmirror(tmp[1], tmp[2])
         return mirror
-    elseif !first
+    elseif first
         @error "Please use `setmirror` for the first time."
     end
     return nothing
@@ -45,7 +45,7 @@ end
 function deactivate()
     current_mirror = current()
     if current_mirror === nothing
-        @warn "No mirror activated"
+        @warn "No mirror activated."
     else
         PKG.deactivate()
         CURRENT[] = nothing
@@ -54,10 +54,14 @@ function deactivate()
 end
 
 function clear()
-    current() === nothing || deactivate()
+    activated() && deactivate()
     delcache("current.txt")
     delcache("registries.txt")
     @info "Cache clear."
+end
+
+function activated()
+    current() !== nothing
 end
 
 end

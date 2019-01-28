@@ -45,6 +45,12 @@ function download_cache(url::AbstractString, localfile::AbstractString)
     download(url, cachefile(localfile))
 end
 
+function replace_in_file(filename::AbstractString, old_new::Pair...)
+    x = read(filename, String)
+    x = replace(x, old_new...)
+    write(filename, x)
+end
+
 function __init__()
     isdir(CACHEPATH) || mkdir(CACHEPATH)
 end

@@ -2,7 +2,7 @@ module PKG
 
 import Pkg
 
-import ..Utils: current, download_cache, cachefile
+import ..Utils: current, download_cache, cachefile, replace_in_file
 
 const CACHEDICT = Dict{String, Any}()
 
@@ -21,20 +21,23 @@ end
 function activate()
     baseurl = current().url
     registry_list = get_registry_list(baseurl, true)
-    original_dict = CACHEDICT["default_registries"] = copy(Pkg.Types.DEFAULT_REGISTRIES)
-    for (x, _) in Pkg.Types.DEFAULT_REGISTRIES
-        if x in registry_list
-            Pkg.Types.DEFAULT_REGISTRIES[x] = joinpath(baseurl, "registries", "$(x).git")
+    default_list = Pkg.Types.DEFAULT_REGISTRIES
+    CACHEDICT["default_registries"] = deepcopy(default_list)
+    for registry in default_list
+        if registry.name in registry_list
+            registry.url = joinpath(baseurl, "registries", "$(registry.name).git")
         end
     end
-    registries = Pkg.Types.registries()
-    for registry in registries
-        name = basename(registry)
-        git_config_file = joinpath(registry, ".git", "config")
-        if name in registry_list && isfile(git_config_file)
-            cfg = read(git_config_file, String)
-            cfg = replace(cfg, original_dict[name] => Pkg.Types.DEFAULT_REGISTRIES[name])
-            write(git_config_file, cfg)
+    for registry in Pkg.Types.collect_registries()
+        git_config_file = joinpath(registry.path, ".git", "config")
+        if registry.name in registry_list && isfile(git_config_file)
+            i = findfirst(x -> x.name == registry.name, default_list)
+            if i == nothing
+                continue
+            end
+            replace_in_file(git_config_file, registry.url => default_list[i].url)
+            toml_file = joinpath(registry.path, "Registry.toml")
+            replace_in_file(toml_file, registry.url => default_list[i].url)
         end
     end
 
@@ -52,21 +55,25 @@ end
 
 function deactivate()
     baseurl = current().url
-    registry_list = get_registry_list(baseurl, true)
-    registries = Pkg.Types.registries()
-    original_dict = CACHEDICT["default_registries"]
+    registry_list = get_registry_list(baseurl, false)
+    registries = Pkg.Types.collect_registries()
+    original_list = CACHEDICT["default_registries"]
     for registry in registries
-        name = basename(registry)
-        if name in registry_list
-            git_config_file = joinpath(registry, ".git", "config")
-            cfg = read(git_config_file, String)
-            cfg = replace(cfg, Pkg.Types.DEFAULT_REGISTRIES[name] => original_dict[name])
-            write(git_config_file, cfg)
+        if registry.name in registry_list
+            i = findfirst(x -> x.name == registry.name, original_list)
+            if i == nothing
+                continue
+            end
+            git_config_file = joinpath(registry.path, ".git", "config")
+            replace_in_file(git_config_file, registry.url => original_list[i].url)
+            toml_file = joinpath(registry.path, "Registry.toml")
+            replace_in_file(toml_file, registry.url => original_list[i].url)
         end
     end
-    for (x, y) in original_dict
-        Pkg.Types.DEFAULT_REGISTRIES[x] = y
+    for (i, x) in enumerate(original_list)
+        Pkg.Types.DEFAULT_REGISTRIES[i] = x
     end
+
     @eval function Pkg.Operations.get_archive_url_for_version(url::String, ref)
         if (m = match(r"https://github.com/(.*?)/(.*?).git", url)) != nothing
             return "https://api.github.com/repos/$(m.captures[1])/$(m.captures[2])/tarball/$(ref)"

@@ -21,7 +21,8 @@ const setmirror = API.setmirror
 const activate = API.activate
 const deactivate = API.deactivate
 const clear = API.clear
-export availables, setmirror, activate, deactivate, clear
+const activated = API.activated
+export availables, setmirror, activate, deactivate, clear, activated
 
 function __init__()
     open(joinpath(@__DIR__, "../data/mirror_list.txt")) do fi
@@ -30,9 +31,9 @@ function __init__()
             MIRRORS[tmp[1]] = tmp[2]
         end
     end
-    API.activate(first=true)
+    API.activate(first=false)
     finalizer(Types.FINALIZER) do _
-        current() === nothing || API.deactivate()
+        activated() && API.deactivate()
     end
 end
 
