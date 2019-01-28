@@ -1,5 +1,5 @@
 name = "PkgMirrors"
-uuid = "879c85a0-8f14-11e8-0652-af3058d99549"
+uuid = "e0fc9d43-7ff6-5671-9fff-748a5437251c"
 author = ["Sunoru <s@sunoru.com>"]
 repo = "https://github.com/sunoru/PkgMirrors.jl.git"
 version = "1.2.0"
