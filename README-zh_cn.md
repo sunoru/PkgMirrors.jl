@@ -12,19 +12,19 @@
 
 **注意：这个库只能与 Pkg3 一起使用，也就是说最低支持的 Julia 版本是 0.7。**
 
-有很多种安装方式：
+推荐的安装方式如下：
 
 ```julia
 julia> # 输入 "]" 以进入包管理器的 REPL 模式
 
-(v1.0) pkg> add PkgMirrors  # 最官方的安装方式
+# 如果你的 Julia 包管理器（Pkg）没有初始化过（比如刚安装完），可以用这句话来初始化 Pkg：
+(v1.1) pkg> registry add https://mirrors.zju.edu.cn/julia/registries/General.git
 
-(v1.0) pkg> add https://github.com/sunoru/PkgMirrors.jl.git  # 从源代码安装
-
-(v1.0) pkg> add https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git@v1.0.0  # 从镜像站安装（推荐）
+# 从镜像站安装这个库：
+(v1.1) pkg> add https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git#v1.2.0
 ```
 
-显然，既然你想使用这个库了，意味着你也会希望能从镜像站安装这个库本身。（虽然可能还是会从 GitHub 上克隆一遍官方的 Registry）
+根据喜好可以使用其它镜像站的 URL 替代上面使用的 ZJU 镜像站。Julia 1.0 的用户请把最后的版本号改成 `v1.1.0`。如果想使用开发分支可以删除 `#v1.2.0`。
 
 ## 使用
 

@@ -25,20 +25,20 @@ Current supported mirrors (see [mirror_list.txt](./data/mirror_list.txt)):
 
 **NOTE: This package will only work with Pkg3, which means you need to run Julia 0.7+ to use it.**
 
-There are several ways to install this package:
+The recommended way to install this package (starting from Julia v1.1):
 
 ```julia
 julia> # Type "]" to enter Pkg REPL-mode.
 
-(v1.0) pkg> add PkgMirrors  # Install from the official registry.
+# If you have a clean Julia environment, you can initialize the General registry (where you the packages are registered) by using:
+(v1.1) pkg> registry add https://mirrors.zju.edu.cn/julia/registries/General.git
 
-(v1.0) pkg> add https://github.com/sunoru/PkgMirrors.jl  # Install from source code.
-
-(v1.0) pkg> add https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git@v1.1.0  # Install from the mirror. (Recommended)
+# Install this package from the mirror:
+(v1.1) pkg> add https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git#v1.2.0
 ```
 
-You will probably prefer the third way, for it is why you want to use `PkgMirrors.jl`. The URL can be
-replaced by that of your preferred mirror. Remove `#v1.0.0` if you want to use the developing branch.
+The URL can be replaced by that of your preferred mirror. If you are using Julia 1.0 you need to use `v1.1.0` at the
+end of the install command. Remove `#v1.2.0` if you want to use the developing branch.
 
 ## Usage
 
