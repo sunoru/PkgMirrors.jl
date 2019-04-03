@@ -40,6 +40,15 @@ julia> # Type "]" to enter Pkg REPL-mode.
 The URL can be replaced by that of your preferred mirror. If you are using Julia 1.0 you need to use `v1.1.0` at the
 end of the install command. Remove `#v1.2.0` if you want to use the developing branch.
 
+If you prefer using scripts to initialize it, use the equivalent API functions like this:
+```julia
+import Pkg
+Pkg.Registry.add(Pkg.RegistrySpec(url="https://mirrors.zju.edu.cn/julia/registries/General.git"))
+Pkg.add(Pkg.PackageSpec(url="https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git", rev="v1.2.0"))
+import PkgMirrors
+PkgMirrors.setmirror("ZJU")
+```
+
 ## Usage
 
 To start with `PkgMirrors.jl`, import the package and set a mirror for your `Pkg`.
