@@ -22,6 +22,9 @@ function activate()
     baseurl = current().url
     registry_list = get_registry_list(baseurl, true)
     default_list = Pkg.Types.DEFAULT_REGISTRIES
+    if typeof(default_list) <: Function
+        default_list = default_list()
+    end
     CACHEDICT["default_registries"] = deepcopy(default_list)
     for registry in default_list
         if registry.name in registry_list
