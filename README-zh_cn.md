@@ -21,16 +21,16 @@ julia> # 输入 "]" 以进入包管理器的 REPL 模式
 (v1.1) pkg> registry add https://mirrors.zju.edu.cn/julia/registries/General.git
 
 # 从镜像站安装这个库：
-(v1.1) pkg> add https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git#v1.2.0
+(v1.1) pkg> add https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git#v1.3.0
 ```
 
-根据喜好可以使用其它镜像站的 URL 替代上面使用的 ZJU 镜像站。Julia 1.0 的用户请把最后的版本号改成 `v1.1.0`。如果想使用开发分支可以删除 `#v1.2.0`。
+根据喜好可以使用其它镜像站的 URL 替代上面使用的 ZJU 镜像站。Julia 1.0 的用户请把最后的版本号改成 `v1.1.0`。如果想使用开发分支可以删除 `#v1.3.0`。
 
 如果你想用脚本来初始化，可以直接用 Pkg 的 API：
 ```julia
 import Pkg
 Pkg.Registry.add(Pkg.RegistrySpec(url="https://mirrors.zju.edu.cn/julia/registries/General.git"))
-Pkg.add(Pkg.PackageSpec(url="https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git", rev="v1.2.0"))
+Pkg.add(Pkg.PackageSpec(url="https://mirrors.zju.edu.cn/julia/PkgMirrors.jl.git", rev="v1.3.0"))
 import PkgMirrors
 PkgMirrors.setmirror("ZJU")
 ```
