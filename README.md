@@ -1,5 +1,7 @@
 # PkgMirrors
 
+**For mainland Chinese users, please refer/中国大陆用户请参考**: https://discourse.juliacn.com/t/topic/2969/1
+
 *Use alternative mirrors to manage your packages for Julia.*
 
 Linux, OSX:
